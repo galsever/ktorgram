@@ -15,26 +15,14 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.util.*
 import org.srino.dotenv
+import org.srino.logic.Session
+import org.srino.logic.User
 import org.srino.managers.GsonSessionSerializer
 import org.srino.sessionManager
 import org.srino.userManager
 import java.util.*
 
 data class UserSession(val sessionId: String)
-
-data class User(
-    val id: String,
-    val username: String,
-    val avatar: String,
-    val global_name: String,
-    val email: String,
-)
-
-data class Session(
-    val id: String,
-    val userId: String,
-    val expiresAt: Long = System.currentTimeMillis() + 60 * 60 * 24 * 1000
-)
 
 fun Application.configureSecurity() {
 
