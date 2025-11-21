@@ -22,6 +22,7 @@ import kotlin.time.Duration.Companion.minutes
 abstract class DatabaseManager<Key: Any, Value: Any>(val name: String, application: Application, val keyClazz: Class<Key>, val valueClazz: Class<Value>) {
 
     open fun onDataLoad() {}
+    open fun onUpdate(key: Key, value: Value) {}
 
     private val data: MutableMap<Key, Value> = mutableMapOf()
     private val changes: MutableMap<Key, Value> = mutableMapOf()
@@ -34,6 +35,7 @@ abstract class DatabaseManager<Key: Any, Value: Any>(val name: String, applicati
         data[key] = value
         changes[key] = value
         removed.remove(key)
+        onUpdate(key, value)
     }
 
     operator fun get(key: Key): Value? {
