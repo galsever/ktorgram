@@ -19,6 +19,11 @@ application {
     mainClass = "io.ktor.server.netty.EngineMain"
 }
 
+repositories {
+    mavenCentral()
+    maven("https://jitpack.io")
+}
+
 dependencies {
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-auth")
@@ -35,6 +40,8 @@ dependencies {
     implementation("org.mongodb:mongodb-driver-core:4.10.2")
     implementation("org.mongodb:mongodb-driver-sync:4.10.2")
     implementation("org.mongodb:bson:4.10.2")
+    implementation("aws.sdk.kotlin:s3:1.0.50")
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+    implementation("com.github.galsever:ktor-upload:0.0.7")
 }

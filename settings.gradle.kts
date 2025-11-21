@@ -1,4 +1,4 @@
-rootProject.name = "ktor-discord-auth"
+rootProject.name = "ktorgram"
 
 dependencyResolutionManagement {
     repositories {

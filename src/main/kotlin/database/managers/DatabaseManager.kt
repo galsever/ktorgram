@@ -16,6 +16,7 @@ import org.srino.database
 import org.srino.debug.Debug
 import org.srino.every
 import org.srino.managers.gson
+import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 
 abstract class DatabaseManager<Key: Any, Value: Any>(val name: String, application: Application, val keyClazz: Class<Key>, val valueClazz: Class<Value>) {
@@ -120,4 +121,30 @@ abstract class DatabaseManager<Key: Any, Value: Any>(val name: String, applicati
 
 private fun Any.toJson(): String {
     return gson.toJson(this)
+}
+
+interface StringKey<T: Any> {
+    fun manager(): DatabaseManager<String, T>
+    fun id(): String
+
+    fun register() {
+        manager()[id()] = this as T
+    }
+    fun delete() {
+        manager().delete(id())
+    }
+    fun update() = register()
+}
+
+interface UUIDKey<T: Any> {
+    fun manager(): DatabaseManager<UUID, T>
+    fun id(): UUID
+
+    fun register() {
+        manager()[id()] = this as T
+    }
+    fun delete() {
+        manager().delete(id())
+    }
+    fun update() = register()
 }

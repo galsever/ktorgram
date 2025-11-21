@@ -19,6 +19,7 @@ import org.srino.logic.Session
 import org.srino.logic.User
 import org.srino.managers.GsonSessionSerializer
 import org.srino.sessionManager
+import org.srino.user
 import org.srino.userManager
 import java.util.*
 
@@ -113,18 +114,7 @@ fun Application.configureSecurity() {
         authenticate("session-auth") {
             get("/auth/me") {
 
-                val userSession = call.sessions.get<UserSession>() ?: return@get
-
-                val session = sessionManager[userSession.sessionId] ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, "Your session does not exist")
-                    return@get
-                }
-
-                val user = userManager[session.userId] ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, "Your session does not exist")
-                    return@get
-                }
-
+                val user = user() ?: return@get
                 call.respond(user)
 
             }
