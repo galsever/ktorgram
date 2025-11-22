@@ -47,7 +47,7 @@ class Share {
     }
 
     fun checkClass(clazz: KClass<*>) {
-        clazz.memberProperties.filter { it.returnType.tsType() == null }.forEach {
+        clazz.memberProperties.filter { it.returnType.tsType() == (it.returnType.classifier as? KClass<*>)?.simpleName }.forEach {
             val classifier = it.returnType.classifier as? KClass<*> ?: return@forEach
             classes.add(classifier)
         }
@@ -153,7 +153,7 @@ class Share {
         return sb.toString()
     }
 
-    private fun KType.tsType(): String? {
+    private fun KType.tsType(): String{
         val classifier = classifier as? KClass<*> ?: error("Classifier is not a class")
         val base = when (classifier) {
             Byte::class,
@@ -197,7 +197,7 @@ class Share {
                 "{ [key: $keyForIndex]: $tsValue }"
             }
 
-            else -> return null
+            else -> classifier.simpleName ?: "any"
         }
         return if (isMarkedNullable) "$base | null" else base
     }

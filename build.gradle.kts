@@ -41,6 +41,7 @@ dependencies {
     implementation("org.mongodb:mongodb-driver-sync:4.10.2")
     implementation("org.mongodb:bson:4.10.2")
     implementation("aws.sdk.kotlin:s3:1.0.50")
+    implementation("io.ktor:ktor-server-cors:3.3.2")
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
     implementation("com.github.galsever:ktor-upload:0.0.7")

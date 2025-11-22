@@ -2,6 +2,7 @@ package org.srino
 
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.server.application.*
+import io.ktor.server.plugins.cors.routing.CORS
 import org.srino.database.Database
 import org.srino.debug.Debug
 import org.srino.ktorupload.KtorUpload
@@ -22,6 +23,10 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
     application = this
+
+    install(CORS) {
+
+    }
 
     database = Database()
 
