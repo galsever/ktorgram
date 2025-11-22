@@ -33,7 +33,7 @@ class PostRoutes: Routes {
             val id = UUID.randomUUID()
 
             val response = postUploadManager.presignedUrl(id.toString(), request.uploadRequest.size, request.uploadRequest.contentType) { fileContentType, fileSize ->
-                PostUpload(request.content, fileSize, fileContentType)
+                PostUpload(fileContentType, fileSize, request.content)
             }
             if (response.result != PresignedUrlResult.SUCCESS) return@sharedPost call.respond(HttpStatusCode.Unauthorized, "An error occurred while generating presigned url: ${response.result}")
             call.respond(PostCreateResponse(id.toString(), response.url!!))
