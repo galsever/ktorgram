@@ -15,6 +15,7 @@ import org.srino.ktorupload.logic.results.PresignedUrlResult
 import org.srino.logic.Post
 import org.srino.modules.Routes
 import org.srino.modules.UserSession
+import org.srino.post
 import org.srino.postManager
 import org.srino.postUploadManager
 import org.srino.user
@@ -29,7 +30,7 @@ class PostRoutes: Routes {
         // CREATE
         // GET
 
-        post("/posts") {
+        post<PostCreateRequest, PostCreateResponse>("/posts") {
             user() ?: return@post
             val request = call.receive<PostCreateRequest>()
 
@@ -39,13 +40,13 @@ class PostRoutes: Routes {
                 PostUpload(request.content, fileSize, fileContentType)
             }
             if (response.result != PresignedUrlResult.SUCCESS) return@post call.respond(HttpStatusCode.Unauthorized, "An error occurred while generating presigned url: ${response.result}")
-            call.respond(PostCreateResponse(id, response.url!!))
+            call.respond(PostCreateResponse(id.toString(), response.url!!))
         }
 
-        post("/posts/finish") {
+        post<PostFinishRequest, Post>("/posts/finish") {
             val user = user() ?: return@post
             val request = call.receive<PostFinishRequest>()
-            val response = postUploadManager.finishedUpload(request.id.toString())
+            val response = postUploadManager.finishedUpload(request.id)
             if (response.result != CopyResult.SUCCESS) return@post call.respond(HttpStatusCode.Unauthorized, "An error occurred while copying the file: ${response.result}")
             val postUpload = response.upload as PostUpload
             val post = Post(request.id, user.id, postUpload.content, response.bucketObject!!)
@@ -55,7 +56,7 @@ class PostRoutes: Routes {
         }
 
         get("/posts/{id}") {
-            val postId = call.parameters["id"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val postId = call.parameters["id"]
             val post = postId?.let { postManager[it] } ?: return@get call.respond(HttpStatusCode.NotFound, "post not found")
 
             call.respond(post)
@@ -70,6 +71,6 @@ data class PostCreateRequest(
     val uploadRequest: PresignedURLRequest
 )
 
-data class PostCreateResponse(val id: UUID, val url: String)
+data class PostCreateResponse(val id: String, val url: String)
 
-data class PostFinishRequest(val id: UUID)
+data class PostFinishRequest(val id: String)

@@ -13,6 +13,7 @@ import org.srino.modules.configureRouting
 import org.srino.modules.configureSecurity
 import org.srino.modules.configureSerialization
 import org.srino.upload.PostUploadManager
+import org.srino.upload.UserUploadManager
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
@@ -38,11 +39,18 @@ fun Application.module() {
     postManager = PostManager()
 
     postUploadManager = PostUploadManager()
+    userUploadManager = UserUploadManager()
 
+    share = Share()
 
     configureSecurity()
     configureSerialization()
     configureRouting()
+
+    val routes = share.routes()
+    val definitions = share.definitions()
+    println(definitions)
+    println(routes)
 
     onStop {
         Debug.send("Shutting down Application")
@@ -63,5 +71,8 @@ lateinit var sessionManager: SessionManager
 lateinit var ktorUpload: KtorUpload
 
 lateinit var postUploadManager: PostUploadManager
+lateinit var userUploadManager: UserUploadManager
+
+lateinit var share: Share
 
 val dotenv = dotenv()
