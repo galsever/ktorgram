@@ -2,10 +2,10 @@ package org.srino
 
 import io.ktor.http.HttpMethod
 import io.ktor.server.routing.Route
-import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.RoutingHandler
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.utils.io.core.Input
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.memberProperties
@@ -13,9 +13,10 @@ import kotlin.reflect.full.memberProperties
 class ShareRoute(
     val path: String,
     val method: HttpMethod,
-    val input: KClass<*>,
+    val input: KClass<*>?,
     val output: KClass<*>,
-    val params: List<String>
+    val params: List<String>,
+    val name: String?
 )
 
 private fun ShareRoute.toFunctionName(): String {
@@ -34,12 +35,22 @@ class Share {
     private val classes: MutableSet<KClass<*>> = mutableSetOf()
     private val routes: MutableList<ShareRoute> = mutableListOf()
 
-    fun addRoute(path: String, method: HttpMethod, input: KClass<*>, output: KClass<*>) {
+    fun addRoute(path: String, method: HttpMethod, input: KClass<*>?, output: KClass<*>, name: String?) {
         val (cleanPath, params) = extractPathAndParams(path)
 
-        classes.add(input)
+        input?.let { checkClass(it) }
+        checkClass(output)
+
+        input?.let { classes.add(it) }
         classes.add(output)
-        routes.add(ShareRoute(cleanPath, method, input, output, params))
+        routes.add(ShareRoute(cleanPath, method, input, output, params, name))
+    }
+
+    fun checkClass(clazz: KClass<*>) {
+        clazz.memberProperties.filter { it.returnType.tsType() == null }.forEach {
+            val classifier = it.returnType.classifier as? KClass<*> ?: return@forEach
+            classes.add(classifier)
+        }
     }
 
     fun routes(): String {
@@ -52,18 +63,19 @@ class Share {
             .sorted()
 
         if (typeNames.isNotEmpty()) {
-            sb.appendLine("import { ${typeNames.joinToString(", ")} } from \"./types\"")
+            sb.appendLine($$"import type { $${typeNames.joinToString(", ")} } from \"$lib/api/definitions.ts\"")
         }
         sb.appendLine("import { request } from \"./request\"")
+        sb.appendLine("import type { Fetcher } from \"./request\"")
         sb.appendLine()
 
         routes.forEach { route ->
-            val inputName = route.input.simpleName ?: "any"
+            val inputName = route.input?.simpleName ?: "any"
             val outputName = route.output.simpleName ?: "any"
 
-            val functionName = route.toFunctionName()
+            val functionName = route.name ?: route.toFunctionName()
 
-            val hasBody = route.input != Unit::class
+            val hasBody = route.input != null && route.input != Unit::class
             val bodyVarName = if (hasBody) {
                 inputName.replaceFirstChar { it.lowercaseChar() }
             } else {
@@ -82,7 +94,7 @@ class Share {
             val bodyArg = if (hasBody) {
                 "JSON.stringify($bodyVarName)"
             } else {
-                "\"\""
+                "null"
             }
 
             val paramsArray = if (route.params.isEmpty()) {
@@ -97,14 +109,17 @@ class Share {
                 if (route.path.endsWith("/")) route.path else route.path + "/"
             }
 
-            sb.appendLine("export async function $functionName($paramsSignature): Promise<$outputName> {")
+            val fetcherParamSignature = "${if (paramsSignature.isBlank()) "" else ", "}fetcher?: Fetcher"
+
+            sb.appendLine("export async function $functionName($paramsSignature$fetcherParamSignature): Promise<$outputName | null> {")
             sb.appendLine("    const res = await request(")
             sb.appendLine("        \"$pathForRequest\",")
             sb.appendLine("        \"${route.method.value}\",")
             sb.appendLine("        $bodyArg,")
-            sb.appendLine("        $paramsArray")
+            sb.appendLine("        $paramsArray,")
+            sb.appendLine("        fetcher,")
             sb.appendLine("    );")
-            sb.appendLine("    return res as $outputName;")
+            sb.appendLine("    return res as $outputName | null;")
             sb.appendLine("}")
             sb.appendLine()
         }
@@ -138,7 +153,7 @@ class Share {
         return sb.toString()
     }
 
-    private fun KType.tsType(): String {
+    private fun KType.tsType(): String? {
         val classifier = classifier as? KClass<*> ?: error("Classifier is not a class")
         val base = when (classifier) {
             Byte::class,
@@ -182,7 +197,7 @@ class Share {
                 "{ [key: $keyForIndex]: $tsValue }"
             }
 
-            else -> classifier.simpleName ?: "any"
+            else -> return null
         }
         return if (isMarkedNullable) "$base | null" else base
     }
@@ -216,11 +231,16 @@ class Share {
     }
 }
 
-fun Share.registerRoute(path: String, method: HttpMethod, input: KClass<*>, output: KClass<*>) {
-    addRoute(path, method, input, output)
+fun Share.registerRoute(path: String, method: HttpMethod, input: KClass<*>?, output: KClass<*>, name: String?) {
+    addRoute(path, method, input, output, name)
 }
 
-inline fun <reified Input, reified Output> Route.post(path: String, noinline body: RoutingHandler) {
+inline fun <reified Input, reified Output> Route.sharedPost(path: String, name: String? = null, noinline body: RoutingHandler) {
     post(path, body)
-    share.registerRoute(path, HttpMethod.Post, Input::class, Output::class)
+    share.registerRoute(path, HttpMethod.Post, Input::class, Output::class, name)
+}
+
+inline fun <reified Output> Route.sharedGet(path: String, name: String? = null, noinline body: RoutingHandler) {
+    get(path, body)
+    share.registerRoute(path, HttpMethod.Get, null, Output::class, name)
 }

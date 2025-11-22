@@ -5,17 +5,13 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.get
-import io.ktor.server.sessions.sessions
-import org.srino.ktorUpload
 import org.srino.ktorupload.logic.Upload
 import org.srino.ktorupload.logic.requests.PresignedURLRequest
 import org.srino.ktorupload.logic.results.CopyResult
 import org.srino.ktorupload.logic.results.PresignedUrlResult
 import org.srino.logic.Post
 import org.srino.modules.Routes
-import org.srino.modules.UserSession
-import org.srino.post
+import org.srino.sharedPost
 import org.srino.postManager
 import org.srino.postUploadManager
 import org.srino.user
@@ -30,8 +26,8 @@ class PostRoutes: Routes {
         // CREATE
         // GET
 
-        post<PostCreateRequest, PostCreateResponse>("/posts") {
-            user() ?: return@post
+        sharedPost<PostCreateRequest, PostCreateResponse>("/posts", "createPost") {
+            user() ?: return@sharedPost
             val request = call.receive<PostCreateRequest>()
 
             val id = UUID.randomUUID()
@@ -39,15 +35,15 @@ class PostRoutes: Routes {
             val response = postUploadManager.presignedUrl(id.toString(), request.uploadRequest.size, request.uploadRequest.contentType) { fileContentType, fileSize ->
                 PostUpload(request.content, fileSize, fileContentType)
             }
-            if (response.result != PresignedUrlResult.SUCCESS) return@post call.respond(HttpStatusCode.Unauthorized, "An error occurred while generating presigned url: ${response.result}")
+            if (response.result != PresignedUrlResult.SUCCESS) return@sharedPost call.respond(HttpStatusCode.Unauthorized, "An error occurred while generating presigned url: ${response.result}")
             call.respond(PostCreateResponse(id.toString(), response.url!!))
         }
 
-        post<PostFinishRequest, Post>("/posts/finish") {
-            val user = user() ?: return@post
+        sharedPost<PostFinishRequest, Post>("/posts/finish", "finishPost") {
+            val user = user() ?: return@sharedPost
             val request = call.receive<PostFinishRequest>()
             val response = postUploadManager.finishedUpload(request.id)
-            if (response.result != CopyResult.SUCCESS) return@post call.respond(HttpStatusCode.Unauthorized, "An error occurred while copying the file: ${response.result}")
+            if (response.result != CopyResult.SUCCESS) return@sharedPost call.respond(HttpStatusCode.Unauthorized, "An error occurred while copying the file: ${response.result}")
             val postUpload = response.upload as PostUpload
             val post = Post(request.id, user.id, postUpload.content, response.bucketObject!!)
             post.register()

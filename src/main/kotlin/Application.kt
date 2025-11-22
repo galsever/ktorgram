@@ -14,6 +14,7 @@ import org.srino.modules.configureSecurity
 import org.srino.modules.configureSerialization
 import org.srino.upload.PostUploadManager
 import org.srino.upload.UserUploadManager
+import java.io.File
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
@@ -47,8 +48,32 @@ fun Application.module() {
     configureSerialization()
     configureRouting()
 
+    val root = File(".").absoluteFile
+
+    val shareFolder = File(root, "share")
+    if (!shareFolder.exists()) shareFolder.mkdirs()
+
+    val defaultRequestFile = File(shareFolder, "request.ts")
+    println(defaultRequestFile.readText(Charsets.UTF_8))
+
+    val frontendRoot = root.parentFile.parentFile
+    println(frontendRoot)
+    val apiFolder = File(frontendRoot, "src/lib/api")
+    if (!apiFolder.exists()) apiFolder.mkdirs()
+
+    val definitionsFile = File(apiFolder, "definitions.ts")
+    if (!definitionsFile.exists()) definitionsFile.createNewFile()
+
+    val routeFile = File(apiFolder, "routes.ts")
+    if (!routeFile.exists()) routeFile.createNewFile()
+
+    val requestFile = File(apiFolder, "request.ts")
+    if (!requestFile.exists()) defaultRequestFile.copyTo(requestFile, true)
+
     val routes = share.routes()
+    routeFile.writeText(routes)
     val definitions = share.definitions()
+    definitionsFile.writeText(definitions)
     println(definitions)
     println(routes)
 

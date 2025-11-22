@@ -19,6 +19,7 @@ import org.srino.logic.Session
 import org.srino.logic.User
 import org.srino.managers.GsonSessionSerializer
 import org.srino.sessionManager
+import org.srino.sharedGet
 import org.srino.user
 import org.srino.userManager
 import java.util.*
@@ -112,9 +113,9 @@ fun Application.configureSecurity() {
         }
 
         authenticate("session-auth") {
-            get("/auth/me") {
+            sharedGet<User>("/auth/me", "currentUser") {
 
-                val user = user() ?: return@get
+                val user = user() ?: return@sharedGet
                 call.respond(user)
 
             }
