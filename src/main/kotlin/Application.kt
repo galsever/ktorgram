@@ -1,6 +1,8 @@
 package org.srino
 
 import io.github.cdimascio.dotenv.dotenv
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.server.application.*
 import io.ktor.server.plugins.cors.routing.CORS
 import org.srino.database.Database
@@ -25,7 +27,18 @@ fun Application.module() {
     application = this
 
     install(CORS) {
+        allowCredentials = true
+        allowHost("localhost:5173", schemes = listOf("http"))
 
+        allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+        allowMethod(HttpMethod.Patch)
+
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Authorization)
     }
 
     database = Database()
