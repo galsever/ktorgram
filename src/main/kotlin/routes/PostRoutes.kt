@@ -21,11 +21,6 @@ class PostRoutes: Routes {
 
     override fun Routing.routes() { authenticate("session-auth") {
 
-
-
-        // CREATE
-        // GET
-
         sharedPost<PostCreateRequest, PostCreateResponse>("/posts", "createPost") {
             user() ?: return@sharedPost
             val request = call.receive<PostCreateRequest>()
