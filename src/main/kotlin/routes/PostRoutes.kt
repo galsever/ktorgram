@@ -14,7 +14,9 @@ import org.srino.modules.Routes
 import org.srino.sharedPost
 import org.srino.postManager
 import org.srino.postUploadManager
+import org.srino.sharedGet
 import org.srino.user
+import org.srino.userManager
 import java.util.UUID
 
 class PostRoutes: Routes {
@@ -46,11 +48,11 @@ class PostRoutes: Routes {
             call.respond(post)
         }
 
-        get("/posts/{id}") {
-            val postId = call.parameters["id"]
-            val post = postId?.let { postManager[it] } ?: return@get call.respond(HttpStatusCode.NotFound, "post not found")
-
-            call.respond(post)
+        sharedGet<List<Post>>("/posts/{username}") {
+            val username = call.parameters["username"]
+            val user = userManager.usersByUsername[username] ?: return@sharedGet call.respond(HttpStatusCode.NotFound, "user not found")
+            val posts = postManager().values.filter { it.owner == user.id }
+            call.respond(posts)
         }
     } }
 }

@@ -9,12 +9,13 @@ import io.ktor.utils.io.core.Input
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.typeOf
 
 class ShareRoute(
     val path: String,
     val method: HttpMethod,
-    val input: KClass<*>?,
-    val output: KClass<*>,
+    val input: KType?,
+    val output: KType,
     val params: List<String>,
     val name: String?
 )
@@ -35,15 +36,27 @@ class Share {
     private val classes: MutableSet<KClass<*>> = mutableSetOf()
     private val routes: MutableList<ShareRoute> = mutableListOf()
 
-    fun addRoute(path: String, method: HttpMethod, input: KClass<*>?, output: KClass<*>, name: String?) {
+    fun addRoute(path: String, method: HttpMethod, input: KType?, output: KType, name: String?) {
         val (cleanPath, params) = extractPathAndParams(path)
 
-        input?.let { checkClass(it) }
-        checkClass(output)
+        collectClasses(input)
+        collectClasses(output)
 
-        input?.let { classes.add(it) }
-        classes.add(output)
         routes.add(ShareRoute(cleanPath, method, input, output, params, name))
+    }
+
+    fun collectClasses(type: KType?) {
+        if (type == null) return
+        val classifier = type.classifier as? KClass<*> ?: return
+
+        if (!classifier.qualifiedName.orEmpty().startsWith("kotlin.")) {
+            checkClass(classifier)
+            classes.add(classifier)
+        }
+
+        type.arguments.forEach { arg ->
+            collectClasses(arg.type)
+        }
     }
 
     fun checkClass(clazz: KClass<*>) {
@@ -70,8 +83,8 @@ class Share {
         sb.appendLine()
 
         routes.forEach { route ->
-            val inputName = route.input?.simpleName ?: "any"
-            val outputName = route.output.simpleName ?: "any"
+            val inputName = route.input?.tsType() ?: "any"
+            val outputName = route.output.tsType()
 
             val functionName = route.name ?: route.toFunctionName()
 
@@ -231,16 +244,16 @@ class Share {
     }
 }
 
-fun Share.registerRoute(path: String, method: HttpMethod, input: KClass<*>?, output: KClass<*>, name: String?) {
+fun Share.registerRoute(path: String, method: HttpMethod, input: KType?, output: KType, name: String?) {
     addRoute(path, method, input, output, name)
 }
 
 inline fun <reified Input, reified Output> Route.sharedPost(path: String, name: String? = null, noinline body: RoutingHandler) {
     post(path, body)
-    share.registerRoute(path, HttpMethod.Post, Input::class, Output::class, name)
+    share.registerRoute(path, HttpMethod.Post, typeOf<Input>(), typeOf<Output>(), name)
 }
 
 inline fun <reified Output> Route.sharedGet(path: String, name: String? = null, noinline body: RoutingHandler) {
     get(path, body)
-    share.registerRoute(path, HttpMethod.Get, null, Output::class, name)
+    share.registerRoute(path, HttpMethod.Get, null, typeOf<Output>(), name)
 }

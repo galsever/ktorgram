@@ -8,4 +8,4 @@ import kotlin.time.Duration.Companion.seconds
 class PostUploadManager: UploadManager(ktorUpload, "temp", "posts", listOf(
     "image/jpeg",
     "image/png"
-), 30.seconds, 5.mb)
+), 30.seconds, 20.mb)
